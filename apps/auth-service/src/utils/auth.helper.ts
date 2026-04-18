@@ -5,6 +5,10 @@ import { sendEmail } from "./sendMail";
 import { NextFunction, Request, Response } from "express";
 import prisma from "../../../../packages/libs/prisma";
 
+// Use generated client type (includes both users and sellers); cast if TS cache is stale
+type PrismaAuth = typeof prisma & { sellers: typeof prisma.users };
+const db: PrismaAuth = prisma as PrismaAuth;
+
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const validateRegistrationData = (
@@ -128,14 +132,15 @@ export const handleForgotPassword = async (
     const { email } = req.body;
     if (!email) throw new ValidationError("Email is required");
     const user =
-      userType === "user" &&
-      (await prisma.users.findUnique({ where: { email } }));
+      userType === "user"
+        ? (await db.users.findUnique({ where: { email } }))
+        : (await db.sellers.findUnique({ where: { email } }));
     if (!user) {
       throw new ValidationError("No account found with this email");
     }
     await checkOtpRestrictions(email, next);
     await trackOtpRequests(email, next);
-    await sendOtp(user.name, email, "password-reset-mail");
+    await sendOtp(user.name, email, userType === "user" ? "forgot-password-user-mail" : "forgot-password-seller-mail");
 
     res.status(200).json({
       message: "OTP sent to email. Please verify your account.",

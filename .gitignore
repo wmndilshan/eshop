@@ -48,8 +48,15 @@ test-output
 
 /generated/prisma
 
+# environment files
 .env
+.env.*
+!.env.example
+!.env.*.example
 
 # Next.js
 .next
 out
+
+# TypeScript incremental build cache
+*.tsbuildinfo
