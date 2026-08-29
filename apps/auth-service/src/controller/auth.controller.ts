@@ -16,7 +16,7 @@ import { setCookie } from "../utils/cookies/setCookie";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-06-01",
+  apiVersion: "2026-08-26.dahlia",
 })
 
 export const userRegistration = async (
@@ -68,7 +68,7 @@ export const verifyUser = async (
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const uesr = await prisma.users.create({
-      data: { name, email, password: hashedPassword },
+      data: { name, email, password: hashedPassword, following: [] },
     });
 
     res.status(201).json({
@@ -101,6 +101,9 @@ export const loginUser = async (
       return next(new AuthError("Invalid password"));
     }
 
+    res.clearCookie("seller-access-token");
+    res.clearCookie("seller-refersh-token");
+    
     // Generate access and refresh token
     const accessToken = jwt.sign(
       { userId: user.id, role: "user" },
@@ -414,6 +417,9 @@ export const loginSeller = async (
     if (!isMatch) {
       return next(new AuthError("Invalid password"));
     }
+
+    res.clearCookie("access_token");
+    res.clearCookie("refresh_token");
 
     // Generate access and refresh token
     const accessToken = jwt.sign(

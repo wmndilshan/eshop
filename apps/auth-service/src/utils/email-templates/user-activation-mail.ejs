@@ -1,92 +1,137 @@
 <!DOCTYPE html>
-<html>
-  <Head>
-    <title>Eshop Activation Email</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Verify your Anon account</title>
     <style>
-      /* Base */
+      * { margin: 0; padding: 0; box-sizing: border-box; }
       body {
-        margin: 0;
-        padding: 0;
-        min-width: 0;
-        font-family: Arial, sans-serif;
-        font-size: 16px;
-        line-height: 1.5;
-        background-color: #fafafa;
-        color: #222222;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.6;
+        color: hsl(0, 0%, 33%);
+        background-color: hsl(0, 0%, 93%);
       }
-      a {
-        color: #000000;
-        text-decoration: none;
+      a { color: inherit; text-decoration: none; }
+      .wrapper {
+        max-width: 560px;
+        margin: 40px auto;
+        background: hsl(0, 100%, 100%);
+        border-radius: 10px;
+        border: 1px solid hsl(0, 0%, 90%);
+        overflow: hidden;
       }
-      h1 {
-        font-size: 24px;
+      .header {
+        background: hsl(0, 0%, 13%);
+        padding: 28px 36px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .header-logo {
+        font-size: 22px;
         font-weight: 700;
-        line-height: 1.25;
-        margin-top: 0;
-        margin-bottom: 15px;
-        text-align: center;
+        color: hsl(0, 100%, 100%);
+        letter-spacing: -0.5px;
       }
-      p {
-        margin-top: 0;
+      .header-logo span {
+        color: hsl(353, 100%, 78%);
       }
-      table td {
-        vertical-align: top;
+      .body {
+        padding: 36px;
       }
-
-      /* Layout */
-      .email-wrapper {
-        max-width: 600px;
-        margin: 0 auto;
+      .greeting {
+        font-size: 20px;
+        font-weight: 700;
+        color: hsl(0, 0%, 13%);
+        margin-bottom: 10px;
       }
-      .email-header {
-        padding: 24px;
-        background-color: #ffffff;
+      .intro {
+        font-size: 14px;
+        color: hsl(0, 0%, 47%);
+        margin-bottom: 32px;
+        line-height: 1.7;
       }
-      .email-footer {
-        background-color: #f6f6f6;
-        padding: 24px;
+      .otp-label {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: hsl(0, 0%, 47%);
+        margin-bottom: 10px;
       }
-
-      /* Buttons */
-      .button {
+      .otp-box {
         display: inline-block;
-        background-color: #0070f3;
-        color: #ffffff;
-        font-size: 16px;
+        background: hsl(0, 0%, 97%);
+        border: 1px solid hsl(0, 0%, 90%);
+        border-radius: 10px;
+        padding: 18px 36px;
+        font-size: 36px;
         font-weight: 700;
+        letter-spacing: 8px;
+        color: hsl(0, 0%, 13%);
+        margin-bottom: 28px;
+      }
+      .expires {
+        font-size: 12px;
+        color: hsl(353, 100%, 78%);
+        font-weight: 600;
+        margin-bottom: 28px;
+      }
+      .divider {
+        border: none;
+        border-top: 1px solid hsl(0, 0%, 93%);
+        margin: 28px 0;
+      }
+      .note {
+        font-size: 13px;
+        color: hsl(0, 0%, 47%);
+      }
+      .footer {
+        background: hsl(0, 0%, 97%);
+        border-top: 1px solid hsl(0, 0%, 93%);
+        padding: 20px 36px;
+        font-size: 11px;
+        color: hsl(0, 0%, 60%);
         text-align: center;
-        text-decoration: none;
-        padding: 12px 24px;
-        border-radius: 4px;
+        line-height: 1.7;
+      }
+      .footer a {
+        color: hsl(353, 100%, 78%);
       }
     </style>
-  </Head>
+  </head>
   <body>
-    <div class="email-wrapper">
-      <div class="email-header">
-        <h1>Welcome to Eshop</h1>
+    <div class="wrapper">
+      <div class="header">
+        <div class="header-logo">Anon<span>.</span></div>
       </div>
-      <div class="email-body">
-        <p>Hello <%= name %>,</p>
-        <p>
-          Thank you for registering with Eshop. To activate your account, please
-          use the following activation code:
+
+      <div class="body">
+        <p class="greeting">Hey <%= name %>, welcome!</p>
+        <p class="intro">
+          Thanks for signing up to Anon. To activate your account and start shopping,
+          please use the verification code below. It expires in <strong>5 minutes</strong>.
         </p>
-        <h2><%= otp %></h2>
-        <p>
-          Please enter this code on the avtivation page withnin the next 5
-          minutes.
-        </p>
-        <p>
-          If you did not register for a Eshop account, please ignore this eamil.
+
+        <p class="otp-label">Your verification code</p>
+        <div class="otp-box"><%= otp %></div>
+
+        <p class="expires">⏳ Expires in 5 minutes</p>
+
+        <hr class="divider" />
+
+        <p class="note">
+          If you didn't create an Anon account, you can safely ignore this email.
+          Someone may have entered your email address by mistake.
         </p>
       </div>
-      <div class="email-footer">
-        <p>
-          If you have any question, please don't hesitate to contact use at
-          <a href="mailto:casper888888888888@gmail.com">casper888888888888@gmail.com</a>
+
+      <div class="footer">
+        <p>© <%= new Date().getFullYear() %> Anon Marketplace. All rights reserved.</p>
+        <p style="margin-top: 4px;">
+          Need help? <a href="mailto:support@anon.lk">support@anon.lk</a>
         </p>
       </div>
     </div>

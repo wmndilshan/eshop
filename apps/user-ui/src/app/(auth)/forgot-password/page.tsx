@@ -1,16 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import Link from 'next/link';
 import { authApi, ForgotPasswordRequest, ResetPasswordRequest } from '@/lib/api/auth';
 import { handleApiError } from '@/lib/api/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { OtpInput } from '@/components/auth/otp-input';
-import Link from 'next/link';
 
 type ForgotFormData = ForgotPasswordRequest;
 type ResetFormData = Omit<ResetPasswordRequest, 'email' | 'otp'> & { confirmPassword: string };
@@ -21,6 +21,9 @@ export default function ForgotPasswordPage() {
   const [userEmail, setUserEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [resendTimer, setResendTimer] = useState(0);
+  const [otpExpiryTimer, setOtpExpiryTimer] = useState(0);
+  const resendTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const otpExpiryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const {
     register: registerEmail,
@@ -35,13 +38,20 @@ export default function ForgotPasswordPage() {
     watch,
   } = useForm<ResetFormData>();
 
+  const newPasswordValue = watch('newPassword', '');
+  const hasUppercase = /[A-Z]/.test(newPasswordValue);
+  const hasLowercase = /[a-z]/.test(newPasswordValue);
+  const hasNumber = /\d/.test(newPasswordValue);
+  const isLongEnough = newPasswordValue.length >= 8;
+
   const forgotPasswordMutation = useMutation({
     mutationFn: authApi.forgotPassword,
     onSuccess: (data, variables) => {
       toast.success(data.message);
       setUserEmail(variables.email);
       setStep('otp');
-      startResendTimer();
+      setOtp('');
+      startOtpTimers();
     },
     onError: (error) => {
       const apiError = handleApiError(error);
@@ -65,7 +75,8 @@ export default function ForgotPasswordPage() {
     mutationFn: () => authApi.forgotPassword({ email: userEmail }),
     onSuccess: (data) => {
       toast.success(data.message);
-      startResendTimer();
+      setOtp('');
+      startOtpTimers();
     },
     onError: (error) => {
       const apiError = handleApiError(error);
@@ -86,17 +97,52 @@ export default function ForgotPasswordPage() {
     },
   });
 
-  const startResendTimer = () => {
+  const clearTimer = (timerRef: React.MutableRefObject<ReturnType<typeof setInterval> | null>) => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const startOtpTimers = () => {
+    clearTimer(resendTimerRef);
+    clearTimer(otpExpiryTimerRef);
+
     setResendTimer(60);
-    const interval = setInterval(() => {
+    setOtpExpiryTimer(299);
+
+    resendTimerRef.current = setInterval(() => {
       setResendTimer((prev) => {
         if (prev <= 1) {
-          clearInterval(interval);
+          clearTimer(resendTimerRef);
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
+
+    otpExpiryTimerRef.current = setInterval(() => {
+      setOtpExpiryTimer((prev) => {
+        if (prev <= 1) {
+          clearTimer(otpExpiryTimerRef);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  useEffect(() => {
+    return () => {
+      clearTimer(resendTimerRef);
+      clearTimer(otpExpiryTimerRef);
+    };
+  }, []);
+
+  const formatOtpExpiry = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   const onSubmitEmail = (data: ForgotFormData) => {
@@ -105,10 +151,10 @@ export default function ForgotPasswordPage() {
 
   const handleOtpSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.length === 6) {
+    if (otp.length === 4) {
       verifyForgotPasswordOtpMutation.mutate({ email: userEmail, otp });
     } else {
-      toast.error('Please enter a valid 6-digit OTP');
+      toast.error('Please enter a valid 4-digit code');
     }
   };
 
@@ -119,173 +165,143 @@ export default function ForgotPasswordPage() {
     });
   };
 
-  if (step === 'reset') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-              Reset Your Password
-            </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
-              Enter your new password
-            </p>
-          </div>
-          <form className="mt-8 space-y-6" onSubmit={handleSubmitReset(onSubmitReset)}>
-            <div className="space-y-4">
-              <Input
-                label="New Password"
-                type="password"
-                placeholder="••••••••"
-                error={resetErrors.newPassword?.message}
-                {...registerReset('newPassword', {
-                  required: 'Password is required',
-                  minLength: {
-                    value: 8,
-                    message: 'Password must be at least 8 characters',
-                  },
-                  pattern: {
-                    value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-                    message: 'Password must contain uppercase, lowercase, and number',
-                  },
-                })}
-              />
-
-              <Input
-                label="Confirm Password"
-                type="password"
-                placeholder="••••••••"
-                error={resetErrors.confirmPassword?.message}
-                {...registerReset('confirmPassword', {
-                  required: 'Please confirm your password',
-                  validate: (value) =>
-                    value === watch('newPassword') || 'Passwords do not match',
-                })}
-              />
-            </div>
-
-            <div className="flex flex-col gap-4">
-              <Button
-                type="submit"
-                className="w-full"
-                isLoading={resetPasswordMutation.isPending}
-              >
-                Reset Password
-              </Button>
-
-              <button
-                type="button"
-                onClick={() => setStep('otp')}
-                className="text-sm text-gray-600 hover:text-gray-900"
-              >
-                ← Back
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  if (step === 'otp') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-              Verify OTP
-            </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
-              We've sent a 6-digit code to <span className="font-medium">{userEmail}</span>
-            </p>
-          </div>
-          <form className="mt-8 space-y-6" onSubmit={handleOtpSubmit}>
-            <OtpInput value={otp} onChange={setOtp} />
-            
-            <div className="flex flex-col gap-4">
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={otp.length !== 6}
-              >
-                Verify OTP
-              </Button>
-
-              <div className="text-center">
-                {resendTimer > 0 ? (
-                  <p className="text-sm text-gray-600">
-                    Resend OTP in {resendTimer}s
-                  </p>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => resendOtpMutation.mutate()}
-                    disabled={resendOtpMutation.isPending}
-                    className="text-sm text-blue-600 hover:text-blue-500"
-                  >
-                    Resend OTP
-                  </button>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setStep('email')}
-                className="text-sm text-gray-600 hover:text-gray-900"
-              >
-                ← Back to email
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Forgot Password?
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Enter your email address and we'll send you an OTP to reset your password
-          </p>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmitEmail(onSubmitEmail)}>
-          <Input
-            label="Email Address"
-            type="email"
-            placeholder="john@example.com"
-            error={emailErrors.email?.message}
-            {...registerEmail('email', {
-              required: 'Email is required',
-              pattern: {
-                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                message: 'Invalid email address',
-              },
-            })}
-          />
+    <div className="space-y-6 font-sans my-auto py-4">
+      {step === 'email' && (
+        <>
+          <div>
+            <span className="badge badge-dark mb-2">Password Recovery</span>
+            <h1 className="text-3xl font-extrabold text-[var(--eerie-black)] tracking-tight mb-1">
+              Reset Password
+            </h1>
+            <p className="text-xs text-[var(--sonic-silver)]">
+              Enter your registered email address to receive a 4-digit security code.
+            </p>
+          </div>
 
-          <div className="flex flex-col gap-4">
+          <form className="space-y-5" onSubmit={handleSubmitEmail(onSubmitEmail)}>
+            <Input
+              label="Email Address"
+              type="email"
+              placeholder="name@domain.com"
+              error={emailErrors.email?.message}
+              {...registerEmail('email', {
+                required: 'Email address is required',
+                pattern: {
+                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  message: 'Please enter a valid email address',
+                },
+              })}
+            />
+
             <Button
               type="submit"
-              className="w-full"
+              variant="primary"
+              className="w-full py-3.5 text-xs font-bold"
               isLoading={forgotPasswordMutation.isPending}
             >
-              Send OTP
+              Send Recovery Code
+            </Button>
+          </form>
+        </>
+      )}
+
+      {step === 'otp' && (
+        <div className="text-center space-y-5">
+          <span className="badge badge-accent">Step 2 of 3</span>
+          <h2 className="text-2xl font-bold text-[var(--eerie-black)]">Verify Recovery Code</h2>
+          <p className="text-xs text-[var(--sonic-silver)]">
+            Sent to <strong className="text-[var(--eerie-black)]">{userEmail}</strong>
+          </p>
+
+          <form onSubmit={handleOtpSubmit} className="space-y-5 max-w-sm mx-auto">
+            <OtpInput value={otp} onChange={setOtp} />
+
+            <p className="text-xs text-[var(--salmon-pink)] font-bold">
+              Expires in {formatOtpExpiry(otpExpiryTimer)}
+            </p>
+
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full py-3 text-xs font-bold"
+              disabled={otp.length !== 4}
+              isLoading={verifyForgotPasswordOtpMutation.isPending}
+            >
+              Verify Code
             </Button>
 
-            <Link
-              href="/login"
-              className="text-center text-sm text-gray-600 hover:text-gray-900"
-            >
-              ← Back to login
-            </Link>
+            <div className="text-xs text-[var(--davys-gray)] pt-2">
+              Didn&apos;t receive the code?{' '}
+              {resendTimer > 0 ? (
+                <span className="text-[var(--spanish-gray)]">Resend in {resendTimer}s</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => resendOtpMutation.mutate()}
+                  className="text-[var(--salmon-pink)] font-bold hover:underline"
+                >
+                  Resend Code
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+      )}
+
+      {step === 'reset' && (
+        <>
+          <div>
+            <span className="badge badge-dark mb-2">Final Step</span>
+            <h2 className="text-2xl font-bold text-[var(--eerie-black)]">Set New Password</h2>
+            <p className="text-xs text-[var(--sonic-silver)]">Choose a strong new password for your account.</p>
           </div>
-        </form>
-      </div>
+
+          <form className="space-y-4" onSubmit={handleSubmitReset(onSubmitReset)}>
+            <Input
+              label="New Password"
+              type="password"
+              placeholder="••••••••"
+              error={resetErrors.newPassword?.message}
+              {...registerReset('newPassword', {
+                required: 'New password is required',
+                minLength: { value: 8, message: 'Must be at least 8 characters' },
+                pattern: {
+                  value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+                  message: 'Must contain uppercase, lowercase & number',
+                },
+              })}
+            />
+
+            <Input
+              label="Confirm Password"
+              type="password"
+              placeholder="••••••••"
+              error={resetErrors.confirmPassword?.message}
+              {...registerReset('confirmPassword', {
+                required: 'Please confirm your new password',
+                validate: (val) => val === watch('newPassword') || 'Passwords do not match',
+              })}
+            />
+
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full py-3.5 text-xs font-bold"
+              isLoading={resetPasswordMutation.isPending}
+            >
+              Reset Password
+            </Button>
+          </form>
+        </>
+      )}
+
+      <p className="text-center text-xs text-[var(--davys-gray)] pt-4">
+        Remember your password?{' '}
+        <Link href="/login" className="text-[var(--salmon-pink)] font-bold hover:underline">
+          Return to Sign In
+        </Link>
+      </p>
     </div>
   );
 }

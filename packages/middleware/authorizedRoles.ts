@@ -5,10 +5,12 @@ export const isSeller = (req: any, res: Response, next: NextFunction) => {
   if (req.role !== "seller") {
     return next(new AuthError("Access denied! Sellers only resource"));
   }
+  next();
 };
 
 export const isUser = (req: any, res: Response, next: NextFunction) => {
   if (req.role !== "user") {
     return next(new AuthError("Access denied! Users only resource"));
   }
+  next();
 };

@@ -1,20 +1,28 @@
 import './global.css';
 import { QueryProvider } from './providers/query-provider';
 import { Toaster } from 'react-hot-toast';
+import { Poppins } from 'next/font/google';
+
+const poppins = Poppins({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  display: 'swap',
+});
 
 export const metadata = {
-  title: 'Eshop',
-  description: 'Multi-vendor e-commerce platform',
-}
+  title: 'Anon E-Commerce | Premium Marketplace',
+  description: 'Sri Lanka\'s premium multi-vendor e-commerce platform',
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" className={poppins.className}>
+      <head />
+      <body className="antialiased bg-[var(--white,#ffffff)] text-[var(--davys-gray,#4d4d4d)]">
         <QueryProvider>
           {children}
           <Toaster
@@ -22,21 +30,24 @@ export default function RootLayout({
             toastOptions={{
               duration: 4000,
               style: {
-                background: '#363636',
-                color: '#fff',
+                background: 'var(--eerie-black)',
+                color: 'var(--white)',
+                fontFamily: 'inherit',
+                fontSize: 'var(--fs-7)',
+                borderRadius: 'var(--radius-sm)',
               },
               success: {
                 duration: 3000,
                 iconTheme: {
-                  primary: '#10b981',
-                  secondary: '#fff',
+                  primary: 'var(--ocean-green)',
+                  secondary: 'var(--white)',
                 },
               },
               error: {
                 duration: 4000,
                 iconTheme: {
-                  primary: '#ef4444',
-                  secondary: '#fff',
+                  primary: 'var(--bittersweet)',
+                  secondary: 'var(--white)',
                 },
               },
             }}
@@ -44,5 +55,5 @@ export default function RootLayout({
         </QueryProvider>
       </body>
     </html>
-  )
+  );
 }

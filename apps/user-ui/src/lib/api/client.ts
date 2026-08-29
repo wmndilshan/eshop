@@ -1,21 +1,12 @@
 import axios, { AxiosError } from 'axios';
 
-const AUTH_SERVICE_URL =
+const API_GATEWAY_URL =
   typeof window !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_AUTH_SERVICE_URL || 'http://localhost:6001')
-    : (process.env.AUTH_SERVICE_URL || 'http://localhost:6001');
+    ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080')
+    : (process.env.AUTH_SERVICE_URL || 'http://localhost:8080');
 
 export const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || '',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true,
-});
-
-/** Axios instance for auth-service; use for all auth API calls (register, login, etc.) */
-export const authClient = axios.create({
-  baseURL: AUTH_SERVICE_URL,
+  baseURL: API_GATEWAY_URL,
   headers: {
     'Content-Type': 'application/json',
   },
